@@ -16,6 +16,11 @@ var secondPick = -1;
 var firstIndex = -1;
 var secondIndex = -1;
 
+//Disable clicks when game is not started
+var gameStarted = false;
+//Disable clicks when cards are revealed on failure
+var clickable = true; 
+
 function Card({ value, onCardClick }) {
   return (
     <button className="card" onClick={onCardClick}>
@@ -25,8 +30,10 @@ function Card({ value, onCardClick }) {
 }
 
 export default function Board(){
+
   //Array of all cards to access later
   const cardImages = [oneCard,twoCard,threeCard,fourCard,fiveCard,sixCard];
+
 
 
   const [cards, setCards] = useState(Array(12).fill(0));
@@ -35,13 +42,12 @@ export default function Board(){
   const [faceUp, setFaceUp] = useState  (Array (12).fill(false)); 
   const [count, setCount] = useState(0);
 
-  function timeout(delay: number) {
-    return new Promise( res => setTimeout(res, delay) );
-  }
+
   function handleClick(i) {
 
-      //The two conditions under which a card should not be flippable
-      if ((matched[i] == true) || (faceUp[i] == true)) {
+      //The conditions under which a card should not be flippable
+      if ((matched[i] == true) || (faceUp[i] == true)  ||(!clickable) || (!gameStarted) ||
+       ((firstPick != -1 ) && (secondPick != -1))) {
         return;
       }
 
@@ -88,21 +94,32 @@ export default function Board(){
         }
         //Match failed, flip back
         else {
-          resetText[firstIndex] = <img src = {cardback} />;
-          resetText[secondIndex] = <img src = {cardback} />;
+          clickable = false;
+          const resetText = texts.slice()
 
-          setTexts(resetText);
+  
+          resetText[secondIndex] = <img src = {cardback} />
+          resetText[firstIndex] = <img src = {cardback} />
 
-          const nextFace = faceUp.slice();
-          nextFace[firstIndex] = false;
-          nextFace[secondIndex] = false;
-          setFaceUp (nextFace);
+          //Use setTimeout to delay the changing of the image
+          setTimeout(() => {
+            setTexts(resetText)
+          }, 2000);
+
+          const nextFace = faceUp.slice()
+          nextFace[firstIndex] = false
+          nextFace[secondIndex] = false
+          setFaceUp (nextFace)
+
+          //Disable clicks while cards are revealed
+          setTimeout(() => {
+            clickable = true;
+          }, 2000);
         }
 
         //Reset the picks
         firstPick = -1;
         secondPick = -1;
-     
         firstIndex = -1;
         secondIndex = -1;
 
@@ -125,6 +142,8 @@ export default function Board(){
 
   //Sets the board to initial state 
   function reset(){
+
+    gameStarted = true;
 
     //Assign an id to each card
     const replaceCards = cards.slice();
@@ -170,6 +189,32 @@ export default function Board(){
 
   }
 
+  //Calculate when the game is over
+  const victory = calculateVictory();
+  function calculateVictory() {
+    var checkVictory = false;
+
+    for (let i = 0; i < 12; i++)
+    {
+      if (matched[i] != true)
+      {
+        return checkVictory;
+      }
+    }
+
+    checkVictory = true;
+    return checkVictory; 
+  }
+
+  //Display this message only if game is over
+  let status;
+  if (victory) {
+    status = "Congratulations! You have won."
+  } else {
+    status = "";
+  }
+  
+
   return (
     <>
       <div className="board-row">
@@ -205,12 +250,15 @@ export default function Board(){
       </div>
 
       <button className = "boardButtons" onClick = {reset}>
-        Reset
+        New Game
       </button>
 
-      <div>
-        <p> Turns Taken: {count} </p>
+      <div className= "turnText">
+        <p> Actions Taken: {count} </p>
+        <p>Turns Taken: {Math.floor(count/2)} </p>
       </div>
+
+      <div className = "victoryText">{status}</div>
     </>
 
   )
